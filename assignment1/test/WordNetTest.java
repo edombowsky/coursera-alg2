@@ -1,8 +1,7 @@
 import org.junit.Before;
 import org.junit.Test;
 
-import static org.hamcrest.CoreMatchers.*;
-import java.lang.IllegalArgumentException;
+import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.*;
 
 
@@ -64,13 +63,13 @@ public class WordNetTest
     public void testCyclesInvalid()
     {
         WordNet wordNetInvalidCycle = new WordNet("resources/synsets3.txt",
-                                                  "resources/hypernymsInvalidCycle.txt");
+                                                  "resources/hypernyms3InvalidCycle.txt");
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testTwoRootsInvalid()
     {
         WordNet wordNetTwoRoots = new WordNet("resources/synsets3.txt",
-                                              "resources/hypernymsInvalidTwoRoots.txt");
+                                              "resources/hypernyms3InvalidTwoRoots.txt");
     }
 }

@@ -1,9 +1,10 @@
+import org.junit.Before;
 import org.junit.Test;
 
-import org.junit.Before;
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
 import java.util.Arrays;
+
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertThat;
 
 public class SAPTest
 {
