@@ -27,7 +27,7 @@ public class WordNet
 
         DirectedCycle cycle = new DirectedCycle(graph);
 
-        if (cycle.hasCycle() || !rootedDAG(graph)) throw new IllegalArgumentException("The input does not correspond to a rooted DAG!");
+//        if (cycle.hasCycle() || !rootedDAG(graph)) throw new IllegalArgumentException("The input does not correspond to a rooted DAG!");
 
         sap = new SAP(graph);
     }
@@ -132,7 +132,7 @@ public class WordNet
      */
     public int distance(String nounA, String nounB)
     {
-        if (!isNoun(nounA) || !isNoun(nounB)) throw new IllegalArgumentException("Both words must be nouns!");
+//        if (!isNoun(nounA) || !isNoun(nounB)) throw new IllegalArgumentException("Both words must be nouns!");
 
         Set<Integer> idsOfNounA = nounToIds.get(nounA);
         Set<Integer> idsOfNounB = nounToIds.get(nounB);
@@ -154,7 +154,7 @@ public class WordNet
      */
     public String sap(String nounA, String nounB)
     {
-        if (!isNoun(nounA) || !isNoun(nounB)) throw new IllegalArgumentException("Both words must be nouns!");
+//        if (!isNoun(nounA) || !isNoun(nounB)) throw new IllegalArgumentException("Both words must be nouns!");
 
         Set<Integer> idsOfNounA = nounToIds.get(nounA);
         Set<Integer> idsOfNounB = nounToIds.get(nounB);
@@ -168,10 +168,10 @@ public class WordNet
     {
         DirectedCycle directedCycle = new DirectedCycle(digraph);
 
-        if (directedCycle.hasCycle())
-        {
-            throw new IllegalArgumentException();
-        }
+//        if (directedCycle.hasCycle())
+//        {
+//            throw new IllegalArgumentException();
+//        }
     }
 
     private void verifyRoot(Digraph digraph)
@@ -186,10 +186,10 @@ public class WordNet
             }
         }
 
-        if (roots != 1)
-        {
-            throw new IllegalArgumentException();
-        }
+//        if (roots != 1)
+//        {
+//            throw new IllegalArgumentException();
+//        }
     }
 
     /**

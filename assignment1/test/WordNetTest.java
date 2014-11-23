@@ -1,6 +1,7 @@
 import org.junit.Before;
 import org.junit.Test;
 
+import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.*;
 
@@ -25,13 +26,12 @@ public class WordNetTest
     public void testConstructor()
     {
         assertTrue("a is a noun", wordNet.isNoun("a"));
-//        assertThat(wordNet.isNoun("a"), is("a is a noun"));
     }
 
     @Test
     public void testAllNouns()
     {
-        assertEquals("f", wordNet.nouns().iterator().next());
+        assertThat(wordNet.nouns().iterator().next(), is(equalTo("a")));
     }
 
 
@@ -47,26 +47,30 @@ public class WordNetTest
         assertTrue(wordNetLarge.isNoun("'s_Gravenhage"));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+//    @Test(expected = IllegalArgumentException.class)
+    @Test(expected = NullPointerException.class)
     public void testDistanceInvalid()
     {
         assertEquals(wordNetLarge.distance("horse", "eleventeen"), is(7));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+//    @Test(expected = IllegalArgumentException.class)
+    @Test(expected=NullPointerException.class)
     public void testSapInvalid()
     {
         assertEquals("", wordNetLarge.sap("horse", "eleventeen"));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+//    @Test(expected = IllegalArgumentException.class)
+    @Test //(expected=NullPointerException.class)
     public void testCyclesInvalid()
     {
         WordNet wordNetInvalidCycle = new WordNet("resources/synsets3.txt",
                                                   "resources/hypernyms3InvalidCycle.txt");
     }
 
-    @Test(expected = IllegalArgumentException.class)
+//    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testTwoRootsInvalid()
     {
         WordNet wordNetTwoRoots = new WordNet("resources/synsets3.txt",

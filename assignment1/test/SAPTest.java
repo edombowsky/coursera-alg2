@@ -51,7 +51,14 @@ public class SAPTest
     @Test
     public void testDigraph1()
     {
-        assertThat(sap1.length(3, 11), is(4));
+        assertThat(sap1.length(3, 11),   is(4));
+        assertThat(sap1.length(9, 12),   is(3));
+        assertThat(sap1.length(7, 2),    is(4));
+        assertThat(sap1.length(1, 6),    is(-1));
+        assertThat(sap1.ancestor(3, 11), is(1));
+        assertThat(sap1.ancestor(9, 12), is(5));
+        assertThat(sap1.ancestor(7, 2),  is(0));
+        assertThat(sap1.ancestor(1, 6),  is(-1));
 //        assertEquals(4, sap1.length(3, 11));
     }
 
