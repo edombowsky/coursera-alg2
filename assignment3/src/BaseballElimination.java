@@ -1,20 +1,19 @@
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
-
 
 public class BaseballElimination
 {
-    private HashMap<String, Integer> name2ID;
-    private String[] id2Name;
-    private int[] wins;
-    private int[] loss;
-    private int[] remaining;
-    private int[][] games;
-    // for trivial elimination
-    private int maxWins;
-    private String maxWinsTeam;
-    private Iterable<String> eliminations;
+    private static final double EPSILON = 1E-6;
+
+    private int maxWinCountCurrent;
+    private String maxWinTeamCurrent;
+    private int teamCount;
+    private ArrayList<String> teamNames;
+    private HashMap<String, Integer> team2Index;
+    private int[] winCounts;
+    private int[] lossCounts;
+    private int[] remainingCounts;
+    private int[][] remainGames;
 
     /**
      * Create a baseball division from given filename in format specified below
@@ -23,41 +22,38 @@ public class BaseballElimination
      */
     public BaseballElimination(String filename)
     {
-        In fileIn   = new In(filename);
-        int teamNum = Integer.parseInt(fileIn.readLine());
+        In in = new In(filename);
+        teamCount = in.readInt();
 
-        name2ID      = new HashMap<String, Integer>(teamNum);
-        id2Name      = new String[teamNum];
-        wins         = new int[teamNum];
-        maxWins      = 0;
-        maxWinsTeam  = null;
-        loss         = new int[teamNum];
-        remaining    = new int[teamNum];
-        games        = new int[teamNum][teamNum];
-        eliminations = null;
+        // Init members
+        teamNames       = new ArrayList<String>();
+        team2Index      = new HashMap<String, Integer>();
+        winCounts       = new int[teamCount];
+        lossCounts      = new int[teamCount];
+        remainingCounts = new int[teamCount];
+        remainGames     = new int[teamCount][teamCount];
 
-        // initialize
-        for (int i = 0; i < teamNum; i++)
+        // read data
+        for (int i = 0; i < teamCount; i++)
         {
-            String[] teamInfos = fileIn.readLine().trim().split(" +");
+            String teamName = in.readString();
 
-            name2ID.put(teamInfos[0], i);
+            teamNames.add(teamName);
+            team2Index.put(teamName, i);
+            winCounts[i] = in.readInt();
 
-            id2Name[i] = teamInfos[0];
-            wins[i]    = Integer.parseInt(teamInfos[1]);
-
-            if (wins[i] > maxWins)
+            if (winCounts[i] > maxWinCountCurrent)
             {
-                maxWins     = wins[i];
-                maxWinsTeam = teamInfos[0];
+                maxWinCountCurrent = winCounts[i];
+                maxWinTeamCurrent = teamNames.get(i);
             }
 
-            loss[i]      = Integer.parseInt(teamInfos[2]);
-            remaining[i] = Integer.parseInt(teamInfos[3]);
+            lossCounts[i]      = in.readInt();
+            remainingCounts[i] = in.readInt();
 
-            for (int j = 0; j < teamNum; j++)
+            for (int j = 0; j < teamCount; j++)
             {
-                games[i][j] = Integer.parseInt(teamInfos[4 + j]);
+                remainGames[i][j] = in.readInt();
             }
         }
     }
@@ -65,60 +61,65 @@ public class BaseballElimination
     /**
      * Number of teams
      *
-     * @return
+     * @return the number of teams
      */
     public int numberOfTeams()
     {
-        return name2ID.size();
+        return teamCount;
     }
 
     /**
      * All teams
      *
-     * @return
+     * @return all teams
      */
     public Iterable<String> teams()
     {
-        return name2ID.keySet();
+        return teamNames;
+    }
+
+    private void checkArgument(String team)
+    {
+        if (!team2Index.containsKey(team)) throw new IllegalArgumentException();
     }
 
     /**
      * Number of wins for given team
      *
      * @param team
-     * @return
+     * @return the numer of wins for given team
      */
     public int wins(String team)
     {
-        if (!name2ID.containsKey(team)) throw new IllegalArgumentException();
+        checkArgument(team);
 
-        return wins[name2ID.get(team)];
+        return winCounts[team2Index.get(team)];
     }
 
     /**
      * Number of losses for given team
      *
      * @param team
-     * @return
+     * @return the number of losses fir given team
      */
     public int losses(String team)
     {
-        if (!name2ID.containsKey(team)) throw new IllegalArgumentException();
+        checkArgument(team);
 
-        return loss[name2ID.get(team)];
+        return lossCounts[team2Index.get(team)];
     }
 
     /**
      * Number of remaining games for given team
      *
      * @param team
-     * @return
+     * @return the number of games remaining for given team
      */
     public int remaining(String team)
     {
-        if (!name2ID.containsKey(team)) throw new IllegalArgumentException();
+        checkArgument(team);
 
-        return remaining[name2ID.get(team)];
+        return remainingCounts[team2Index.get(team)];
     }
 
     /**
@@ -126,150 +127,174 @@ public class BaseballElimination
      *
      * @param team1
      * @param team2
-     * @return
+     * @return the number of remaining games between team1 and team2
      */
     public int against(String team1, String team2)
     {
-        if (!name2ID.containsKey(team1) || !name2ID.containsKey(team2))
-            throw new IllegalArgumentException();
+        checkArgument(team1);
+        checkArgument(team2);
 
-        return games[name2ID.get(team1)][name2ID.get(team2)];
+        return remainGames[team2Index.get(team1)][team2Index.get(team2)];
     }
 
     /**
      * Is given team eliminated?
      *
      * @param team
-     * @return
+     * @return true if given team is eliminated, false otherwise
      */
     public boolean isEliminated(String team)
     {
-        if (!name2ID.containsKey(team)) throw new IllegalArgumentException();
+        checkArgument(team);
 
-        // current id of team
-        int id = name2ID.get(team);
+        int teamIndex           = team2Index.get(team);
+        int maxPossibleWinCount = remainingCounts[teamIndex] + winCounts[teamIndex];
 
-        // trivial elimination
-        if (wins[id] + remaining[id] < maxWins)
+        if (maxPossibleWinCount < maxWinCountCurrent) return true;
+
+        int nodeCount = 2                           // s, t
+                + teamCount * (teamCount - 1) / 2   // game vertices
+                + teamCount;                        // team vertices
+
+        // 0..N-1 for team vertices
+        // N..N*(N+1)/2 for game vertices
+        // last 2 node for s and t
+        FlowNetwork network = new FlowNetwork(nodeCount);
+        int s = nodeCount - 2;
+        int t = nodeCount - 1;
+        double sCapacity = 0;
+
+        // edge from team vertices to t
+        for (int i = 0; i < teamCount; i++)
         {
-            ArrayList<String> eliminationsList = new ArrayList<String>();
-            eliminationsList.add(maxWinsTeam);
-            eliminations = eliminationsList;
-
-            return true;
-        }
-
-        //nontrivial elimination
-        // # of vertices = 2 + n-1 + C(n-1,2)
-        FlowNetwork baseball = new FlowNetwork(2 + numberOfTeams() - 1
-                                               + (numberOfTeams() - 1)
-                                               * (numberOfTeams() - 2) / 2);
-
-        // max total wins for each team
-        int maxIdWins = wins[id] + remaining[id];
-
-        // add edge to t( id = 1)
-        for (int i = 0; i < numberOfTeams(); i++) {
-            if (i != id)
+            if (i != teamIndex)
             {
-                baseball.addEdge(new FlowEdge(teamId2EdgeId(i, id), 1,
-                                              maxIdWins - wins[i]));
+                double weight = maxPossibleWinCount - winCounts[i];
+                FlowEdge edge = new FlowEdge(i, t, weight);
+
+                network.addEdge(edge);
             }
         }
 
-        // number of edges already added
-        int numOfEdges = 2 + numberOfTeams() - 1;
+        int gameNodeIndex = teamCount - 1;
 
-        // add edges from s( id = 0) and to 0~n-1
-        for (int j = 0; j < numberOfTeams(); j++)
+        for (int i = 0; i < teamCount; i++)
         {
-            if (j != id)
+            for (int j = i + 1; j < teamCount; j++)
             {
-                for (int k = j + 1; k < numberOfTeams(); k++)
-                {
-                    if (k != id)
-                    {
-                        baseball.addEdge(new FlowEdge(0, numOfEdges, games[j][k]));
-                        baseball.addEdge(new FlowEdge(numOfEdges, teamId2EdgeId(j, id), games[j][k]));
-                        baseball.addEdge(new FlowEdge(numOfEdges, teamId2EdgeId(k, id), games[j][k]));
-                        numOfEdges++;
-                    }
-                }
+                gameNodeIndex++;
+
+                if (i == teamIndex || j == teamIndex) continue;
+
+                // edge from s to game vertices
+                double weight = remainGames[i][j];
+                FlowEdge edge = new FlowEdge(s, gameNodeIndex, weight);
+
+                network.addEdge(edge);
+                sCapacity += weight;
+
+                // edges from game vertices to team vertices
+                edge = new FlowEdge(gameNodeIndex, i, Double.POSITIVE_INFINITY);
+                network.addEdge(edge);
+                edge = new FlowEdge(gameNodeIndex, j, Double.POSITIVE_INFINITY);
+                network.addEdge(edge);
             }
         }
 
-        //Max flow
-        FordFulkerson baseballFordFulkerson = new FordFulkerson(baseball, 0, 1);
+        FordFulkerson alg = new FordFulkerson(network, s, t);
 
-        for (FlowEdge e:baseball.adj(0))
-        {
-            if (e.flow() != e.capacity())
-            {
-                findSubsets(baseball, baseballFordFulkerson, id);
-
-                return true;
-            }
-        }
-
-        eliminations = null;
-
-        return false;
-    }
-
-    private int teamId2EdgeId(int teamId, int desTeamId)
-    {
-        return teamId < desTeamId ? teamId + 2 : teamId + 2 - 1;
-    }
-
-    private int edgeId2TeamId(int edgeId, int desTeamId)
-    {
-        return edgeId - 2 < desTeamId ? edgeId - 2 : edgeId - 2 + 1;
-    }
-
-    private void findSubsets(FlowNetwork fn, FordFulkerson ff, int desTeamId)
-    {
-        HashSet<Integer> ids = new HashSet<Integer>();
-
-        for (FlowEdge e:fn.adj(0))
-        {
-            int matchId = e.other(0);
-
-            // belongs to the s side
-            if (ff.inCut(matchId))
-            {
-                for (FlowEdge adj:fn.adj(matchId))
-                {
-                    int edgeId = adj.other(matchId);
-
-                    if (edgeId != 0) ids.add(edgeId2TeamId(edgeId, desTeamId));
-                }
-            }
-        }
-
-        ArrayList<String> eliminationsList = new ArrayList<String>();
-
-        for (int id:ids)
-        {
-            eliminationsList.add(id2Name[id]);
-        }
-
-        eliminations = eliminationsList;
+        return !(Math.abs(alg.value() - sCapacity) < 1E-6);
     }
 
     /**
-     * Subset R of teams that eliminates given team; null if not eliminated
+     * Provide certification of elimination.
      *
      * @param team
-     * @return
+     * @return the subset R of teams that eliminates given team; null if not eliminated
      */
     public Iterable<String> certificateOfElimination(String team)
     {
-        if (!name2ID.containsKey(team)) throw new IllegalArgumentException();
+        checkArgument(team);
 
-        return isEliminated(team) ? eliminations : null;
+        int teamIndex = team2Index.get(team);
+        int maxPossibleWinCount = remainingCounts[teamIndex] + winCounts[teamIndex];
+
+        if (maxPossibleWinCount < maxWinCountCurrent)
+        {
+            ArrayList<String> result = new ArrayList<String>();
+            result.add(maxWinTeamCurrent);
+
+            return result;
+        }
+
+        int nodeCount = 2                           // s, t
+                + teamCount * (teamCount - 1) / 2   // game vertices
+                + teamCount;                        // team vertices
+
+        // 0..N-1 for team vertices
+        // N..N*(N+1)/2 for game vertices
+        // last 2 node for s and t
+        FlowNetwork network = new FlowNetwork(nodeCount);
+        int s            = nodeCount - 2;
+        int t            = nodeCount - 1;
+        double sCapacity = 0;
+
+        // edge from team vertices to t
+        for (int i = 0; i < teamCount; i++)
+        {
+            if (i != teamIndex)
+            {
+                double weight = maxPossibleWinCount - winCounts[i];
+                FlowEdge edge = new FlowEdge(i, t, weight);
+
+                network.addEdge(edge);
+            }
+        }
+
+        int gameNodeIndex = teamCount - 1;
+
+        for (int i = 0; i < teamCount; i++)
+        {
+            for (int j = i + 1; j < teamCount; j++)
+            {
+                gameNodeIndex++;
+
+                if (i == teamIndex || j == teamIndex) continue;
+
+                // edge from s to game vertices
+                double weight = remainGames[i][j];
+                FlowEdge edge = new FlowEdge(s, gameNodeIndex, weight);
+
+                network.addEdge(edge);
+                sCapacity += weight;
+
+                // edges from game vertices to team vertices
+                edge = new FlowEdge(gameNodeIndex, i, Double.POSITIVE_INFINITY);
+                network.addEdge(edge);
+                edge = new FlowEdge(gameNodeIndex, j, Double.POSITIVE_INFINITY);
+                network.addEdge(edge);
+            }
+        }
+
+        FordFulkerson alg = new FordFulkerson(network, s, t);
+
+        if (Math.abs(alg.value() - sCapacity) < EPSILON) return null;
+
+        ArrayList<String> teams = new ArrayList<String>();
+
+        for (int i = 0; i < teamCount; i++)
+        {
+            if (alg.inCut(i)) teams.add(teamNames.get(i));
+        }
+
+        return teams;
     }
 
-    // test client
+    /**
+     * Test client
+     *
+     * @param args
+     */
     public static void main(String[] args)
     {
         BaseballElimination division = new BaseballElimination(args[0]);
@@ -281,7 +306,9 @@ public class BaseballElimination
                 StdOut.print(team + " is eliminated by the subset R = { ");
 
                 for (String t : division.certificateOfElimination(team))
+                {
                     StdOut.print(t + " ");
+                }
 
                 StdOut.println("}");
             }
